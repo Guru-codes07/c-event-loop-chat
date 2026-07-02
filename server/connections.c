@@ -2,4 +2,4 @@
 #include "connections.h"
 
 // list of all connected clients
-client_t *client[MAX_CLIENTS] = {0};
+client_t *clients[MAX_CLIENTS] = {0};
