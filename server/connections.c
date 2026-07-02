@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <poll.h>
-#include "common.h"
-#include <poll.h>
+#include<sys/socket.h>
+#include<unistd.h>
+
 #include "connections.h"
+#include "common.h"
 
 // list of all connected clients
 client_t *clients[MAX_CLIENTS] = {0};
@@ -55,7 +57,7 @@ void broadcast_message(client_t *sender, char *message)
     {
         if(clients[i]!=NULL && clients[i]!= sender)
         {
-            send(clients[i]->socket_fd,message,strlen(message),0);
+            send((*clients[i]).socket_fd,message,strlen(message),0);
         }
     }
 }
@@ -68,12 +70,12 @@ void send_online_list(client_t *client)
     {
         if(clients[i]!=NULL)
         {
-            strtncat(list,"-",sizeof(list)-strlen(list)-1);
-            strtncat(list,clients[i]->name,sizeof(list)-strlen(list)-1);
+            strncat(list,"-",sizeof(list)-strlen(list)-1);
+            strncat(list,(*clients[i]).name,sizeof(list)-strlen(list)-1);
             strncat(list,"\n",sizeof(list)-strlen(list)-1);
         }
     }
-    send(client->socket_fd,list,strlen(list),0);
+    send((*client).socket_fd,list,strlen(list),0);
 }
 
 // send private messages to a specific client
