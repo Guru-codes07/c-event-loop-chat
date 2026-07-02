@@ -51,7 +51,7 @@ void remove_client(client_t *client)
 }
 
 // broadcast a message to all connected clients except the sender
-void broadcast_message(client_t *sender, char *message)
+void broadcast_message(const char *message,client_t *sender)
 {
     for(int i=0;i<MAX_CLIENTS;i++)
     {
