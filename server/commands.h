@@ -5,6 +5,6 @@
 
 /* Function for declaring /who and /w commands in the program
 which will be used by the clients */
-void handle_commands(client_t *client,const char *command);
+void handle_command(client_t *client,const char *command);
 
 #endif
