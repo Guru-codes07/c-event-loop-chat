@@ -105,7 +105,7 @@ void handle_client_data(client_t *client)
 
         snprintf(message,sizeof(message),"📣 %s has left the chat. \n",(*client).name);
         printf("%s",message);
-        broadcast_message(client,message);
+        broadcast_message(message,client);
         free(client);
         return;
     } 
