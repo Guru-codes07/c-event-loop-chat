@@ -128,15 +128,13 @@ int main(void)
         return 1;
     }
     
-    // initialize the pollfd array
-    struct pollfd fds[MAX_CLIENTS + 1];
     for(int i=0;i<MAX_CLIENTS+1;i++)
     {
         fds[i].fd = -1;      // mark all fds as unused
     }
     fds[0].fd = listen_fd;   // first fd is the listening socket
     fds[0].events = POLLIN;  // monitor for incoming connections
-    int nfds = 1;            // number of fds in the array
+     nfds = 1;            // number of fds in the array
 
     /* MAIN POLL LOOP */
     while(1)
