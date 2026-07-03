@@ -100,7 +100,7 @@ int main()
         perror("send error");
         break;
     }
-    printf("you: ");
+    printf("you: \n");
     fflush(stdout);
 }
 
@@ -119,7 +119,7 @@ int main()
             buffer[bytes_read] = '\0';
             
             /* Print server message and prompt again */
-            printf("\r%s", buffer);
+            printf("\r%s\n", buffer);
             printf("you: ");
             fflush(stdout);
         }

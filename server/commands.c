@@ -1,7 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
-#include<sys/socket.h>
+#include<sys/socket.h> 
 #include"commands.h"
 #include"connections.h"
 #include"common.h"
