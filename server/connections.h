@@ -8,6 +8,11 @@ typedef struct     // client struct
     char name[NAME_SIZE];
 }client_t;
 
+/* Global client table — defined in connections.c, accessible everywhere */
+extern client_t *clients[MAX_CLIENTS];
+extern struct pollfd fds[MAX_CLIENTS + 1];
+extern int nfds;
+
 // functions which are used to manage clients
 // add a new client to the clients array
 int add_client(client_t *client);
