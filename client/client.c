@@ -100,7 +100,7 @@ int main()
         perror("send error");
         break;
     }
-    printf("you: \n");
+    printf("you: ");
     fflush(stdout);
 }
 
