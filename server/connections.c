@@ -82,7 +82,7 @@ void send_online_list(client_t *client)
 int send_private_message(client_t *sender,const char *target_name,const char *text)
 {
     char format[BUFFER_SIZE + NAME_SIZE];
-    snprintf(format,sizeof(format),"whisper from [%s]: %s",(*sender).name,text);
+    snprintf(format,sizeof(format),"whisper from [%s]: %s\n",(*sender).name,text);
     
     for(int i=0;i<MAX_CLIENTS;i++)
     {
