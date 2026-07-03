@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<sys/socket.h>
 #include"commands.h"
 #include"connections.h"
 #include"common.h"
@@ -47,5 +48,5 @@ void handle_command(client_t *client,const char *command)
     char format[BUFFER_SIZE + NAME_SIZE];
     snprintf(format,sizeof(format),"%s: %s\n",(*client).name,command);
     printf("%s",format);
-    broadcast_message(client,format);
+    broadcast_message(format,client);
 }

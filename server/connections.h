@@ -1,6 +1,8 @@
 #ifndef CONNECTIONS_H
 #define CONNECTIONS_H
+#include<poll.h>
 #include "common.h"
+
 
 typedef struct     // client struct  
 {

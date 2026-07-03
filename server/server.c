@@ -81,7 +81,7 @@ void handle_new_connection(int listen_fd)
  char join_msg[BUFFER_SIZE + NAME_SIZE];
  snprintf(join_msg,sizeof(join_msg),"📣 %s has joined the chat. \n",(*new_client).name);
  printf("%s",join_msg);
- broadcast_message(new_client,join_msg);
+ broadcast_message(join_msg,new_client);
 
 }
 
