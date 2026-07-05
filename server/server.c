@@ -244,7 +244,7 @@ int create_server_socket(void)
                 break;
  
             case MSG_DISCONNECT:
-                handle_msg_disconnect(client);
+                handle_msg_disconnect(client,&msg);
                 return;
  
             case MSG_CONNECTION:
