@@ -57,7 +57,7 @@ typedef struct
 }MessageBuffer;
 
 // func() for event loop
-int receive_msg_nonblocking(int socketfd,MessageBuffer *buff,Message *msg);
+int receive_msg_nonblocking(int socketfd,MessageBuffer *buf,Message *msg);
 
 // CRC32 algorithm function
 uint32_t calculate_crc32(const char *data,uint16_t length);

@@ -10,11 +10,8 @@ static int send_all(int sockfd, const void *buffer, size_t length)
 {
     size_t total = 0;
     while (total < length) {
-        ssize_t bytes = send(sockfd,
-                            (const char *)buffer + total,
-                            length - total,
-                            0);
-        if (bytes <= 0)
+        ssize_t bytes = send(sockfd,(const char *)buffer + total,length - total,0);
+            if (bytes <= 0)
             return -1;
         total += bytes;
     }
@@ -26,10 +23,7 @@ static int recv_all(int sockfd, void *buffer, size_t length)
 {
     size_t total = 0;
     while (total < length) {
-        ssize_t bytes = recv(sockfd,
-                            (char *)buffer + total,
-                            length - total,
-                            0);
+        ssize_t bytes = recv(sockfd,(char *)buffer + total,length - total,0);
         if (bytes <= 0)
             return -1;
         total += bytes;
@@ -135,10 +129,7 @@ int receive_msg_nonblocking(int sockfd, MessageBuffer *buf, Message *msg)
 {
     /* Step 1: Fill header */
     if (buf->header_bytes < 24) {
-        ssize_t n = recv(sockfd,
-                        buf->header + buf->header_bytes,
-                        24 - buf->header_bytes,
-                        MSG_DONTWAIT);
+        ssize_t n = recv(sockfd,buf->header + buf->header_bytes,24 - buf->header_bytes,MSG_DONTWAIT);
         if (n < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 return 0;  /* No data available, try again later */
@@ -164,10 +155,7 @@ int receive_msg_nonblocking(int sockfd, MessageBuffer *buf, Message *msg)
     
     /*  Fill payload */
     if (buf->payload_bytes < buf->payload_expected) {
-        ssize_t n = recv(sockfd,
-                        buf->payload + buf->payload_bytes,
-                        buf->payload_expected - buf->payload_bytes,
-                        MSG_DONTWAIT);
+        ssize_t n = recv(sockfd,buf->payload + buf->payload_bytes,buf->payload_expected - buf->payload_bytes,MSG_DONTWAIT);
         if (n < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 return 0;
