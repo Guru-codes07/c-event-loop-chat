@@ -1,10 +1,13 @@
 #ifndef COMMANDS_H
 #define COMMANDS_H
 #include"connections.h"
-#include"common.h"
+#include"protocol.h"
 
-/* Function for declaring /who and /w commands in the program
-which will be used by the clients */
-void handle_command(client_t *client,const char *command);
+/* Message handlers for binary protocol */
+void handle_msg_chat(client_t *client, Message *msg);
+void handle_msg_private(client_t *client, Message *msg);
+void handle_msg_who(client_t *client, Message *msg);
+void handle_msg_disconnect(client_t *client, Message *msg);
+
 
 #endif

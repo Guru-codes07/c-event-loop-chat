@@ -1,38 +1,32 @@
 #ifndef CONNECTIONS_H
 #define CONNECTIONS_H
-#include<poll.h>
-#include "common.h"
-
-
-typedef struct     // client struct  
-{
+ 
+#include <poll.h>
+#include "protocol.h"
+ 
+#define MAX_CLIENTS 100
+#define NAME_SIZE 32
+ 
+/* Client structure with binary protocol support */
+typedef struct {
     int socket_fd;
     char name[NAME_SIZE];
-}client_t;
-
-/* Global client table — defined in connections.c, accessible everywhere */
+    MessageBuffer recv_buf;      /* For partial message buffering */
+    uint32_t next_message_id;    /* Outgoing message counter */
+    time_t last_activity;
+} client_t;
+ 
+/* Global client table — defined in connections.c */
 extern client_t *clients[MAX_CLIENTS];
 extern struct pollfd fds[MAX_CLIENTS + 1];
 extern int nfds;
-
-// functions which are used to manage clients
-// add a new client to the clients array
+ 
+/* Client management functions */
 int add_client(client_t *client);
-
-// remove a client from the clients array
 void remove_client(client_t *client);
-
-/* To broadcast the message to everyone except
-the one who sended it (sender) */
-void broadcast_message(const char *message,client_t *sender);
-
-// function that shows online users
-void send_online_list(client_t *client);
-
-/* function that sends private message to a single user */
-int send_private_message(client_t *sender,const char *target_name,const char *text);
-
-
-
-
+client_t *find_client_by_name(const char *name);
+ 
+/* Message broadcasting */
+void broadcast_message(Message *msg, client_t *exclude);
+ 
 #endif

@@ -1,99 +1,107 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <poll.h>
-#include<sys/socket.h>
-#include<unistd.h>
-
+#include <unistd.h>
+#include <sys/socket.h>
+ 
 #include "connections.h"
-#include "common.h"
-
-// list of all connected clients
+#include "protocol.h"
+ 
+/* Global client table */
 client_t *clients[MAX_CLIENTS] = {0};
-
-// declaring poll() structure
+ 
+/* Poll array for monitoring sockets */
 struct pollfd fds[MAX_CLIENTS + 1] = {0};
 int nfds = 0;
 
-// add a new client to the clients array
+// add_client func():
+
 int add_client(client_t *client)
 {
-    for(int i=0; i<MAX_CLIENTS; i++)
+    if (client == NULL)
+        return 0;
+ 
+    for (int i = 0; i < MAX_CLIENTS; i++) 
     {
-        if(clients[i]==NULL)
+        if (clients[i] == NULL) 
         {
-            clients[i] =  client;
-            int slot = i+1;
-            fds[slot].fd = (*client).socket_fd;
+            clients[i] = client;
+ 
+            /* Add to poll array */
+            int slot = i + 1;
+            fds[slot].fd = client->socket_fd;
             fds[slot].events = POLLIN;
-            if(slot+1>nfds)
+ 
+            if (slot + 1 > nfds) 
             {
                 nfds = slot + 1;
             }
-          return 1;
+ 
+            printf("[INFO] Client added: %s (fd=%d)\n", client->name, client->socket_fd);
+            return 1;
         }
     }
-       return 0;
+ 
+    printf("[INFO] Server full, rejecting client\n");
+    return 0;
 }
+ 
+// remove_client func()
 
-// remove a client from the clients array
 void remove_client(client_t *client)
 {
-    for(int i=0;i<MAX_CLIENTS;i++)
+    if (client == NULL)
+        return;
+ 
+    /* Find and remove from clients array */
+    for (int i = 0; i < MAX_CLIENTS; i++) 
     {
-        if(clients[i]==client)
+        if (clients[i] == client) 
         {
             clients[i] = NULL;
-            fds[i+1].fd = -1;
+            fds[i + 1].fd = -1;
+            printf("[INFO] Client removed: %s\n", client->name);
             break;
         }
     }
 }
+ 
+// client by name 
 
-// broadcast a message to all connected clients except the sender
-void broadcast_message(const char *message,client_t *sender)
+client_t *find_client_by_name(const char *name)
 {
-    for(int i=0;i<MAX_CLIENTS;i++)
+    if (name == NULL)
+        return NULL;
+ 
+    for (int i = 0; i < MAX_CLIENTS; i++) 
     {
-        if(clients[i]!=NULL && clients[i]!= sender)
+        if (clients[i] != NULL && strcmp(clients[i]->name, name) == 0) 
         {
-            send((*clients[i]).socket_fd,message,strlen(message),0);
+            return clients[i];
+        }
+    }
+ 
+    return NULL;
+}
+ 
+// broadcasting the message
+
+void broadcast_message(Message *msg, client_t *exclude)
+{
+    if (msg == NULL)
+        return;
+ 
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        if (clients[i] != NULL && clients[i] != exclude) 
+        {
+            if (send_msg(clients[i]->socket_fd, msg) < 0) 
+            {
+        printf("[ERROR] Failed to send message to %s\n", clients[i]->name);
+            }
         }
     }
 }
 
-// show all connected clients
-void send_online_list(client_t *client)
-{
-    char list[BUFFER_SIZE] = "online users:\n";
-    for(int i=0;i<MAX_CLIENTS;i++)
-    {
-        if(clients[i]!=NULL)
-        {
-            strncat(list,"-",sizeof(list)-strlen(list)-1);
-            strncat(list,(*clients[i]).name,sizeof(list)-strlen(list)-1);
-            strncat(list,"\n",sizeof(list)-strlen(list)-1);
-        }
-    }
-    send((*client).socket_fd,list,strlen(list),0);
-}
-
-// send private messages to a specific client
-int send_private_message(client_t *sender,const char *target_name,const char *text)
-{
-    char format[BUFFER_SIZE + NAME_SIZE];
-    snprintf(format,sizeof(format),"whisper from [%s]: %s\n",(*sender).name,text);
-    
-    for(int i=0;i<MAX_CLIENTS;i++)
-    {
-        if(clients[i]!= NULL && strcmp((*clients[i]).name,target_name)==0)
-        {
-            send((*clients[i]).socket_fd,format,strlen(format),0);
-            return 1;
-        }
-    }
-    return 0;
-}
 
 
 

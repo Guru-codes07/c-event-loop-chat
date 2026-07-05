@@ -1,52 +1,157 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<sys/socket.h> 
-#include"commands.h"
-#include"connections.h"
-#include"common.h"
-#include "network.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <time.h>
  
-
-// Function for declaring /who and /w commands in the program
-// which will be used by the clients
-void handle_command(client_t *client,const char *command)
+#include "commands.h"
+#include "connections.h"
+#include "protocol.h"
+ 
+// chat message handler
+void handle_msg_chat(client_t *client, Message *msg)
 {
-    char trimmed_command[BUFFER_SIZE];
-    strncpy(trimmed_command,command,sizeof(trimmed_command)-1);
-    trimmed_command[sizeof(trimmed_command)-1] = '\0';
-    strip_newline(trimmed_command);
-
-    // Handle /who command
-    if(strcmp(trimmed_command,"/who")==0)
-    {
-        send_online_list(client);
+    if (client == NULL || msg == NULL)
+        return;
+ 
+    msg->payload[msg->length] = '\0';
+ 
+    /* Create broadcast message */
+    Message broadcast_msg = {0};
+    broadcast_msg.version = PROTOCOL_VERSION;
+    broadcast_msg.type = MSG_CHAT;
+    broadcast_msg.message_id = msg->message_id;
+    broadcast_msg.timestamp = time(NULL);
+ 
+    snprintf(broadcast_msg.payload, MAX_PAYLOAD_SIZE,"%s: %s", client->name, msg->payload);
+    broadcast_msg.length = strlen(broadcast_msg.payload);
+ 
+    printf("[CHAT] %s\n", broadcast_msg.payload);
+    broadcast_message(&broadcast_msg, NULL);
+}
+ 
+// handling private message
+void handle_msg_private(client_t *sender, Message *msg)
+{
+    if (sender == NULL || msg == NULL)
+        return;
+ 
+    msg->payload[msg->length] = '\0';
+ 
+    /* Format: recipient_name:message_text */
+    char *colon = strchr(msg->payload, ':');
+    if (colon == NULL)
+     {
+        Message error_msg = {0};
+        error_msg.version = PROTOCOL_VERSION;
+        error_msg.type = MSG_ERROR;
+        error_msg.message_id = msg->message_id;
+        error_msg.timestamp = time(NULL);
+        snprintf(error_msg.payload, MAX_PAYLOAD_SIZE,"Invalid private message format. Use: recipient:message");
+        error_msg.length = strlen(error_msg.payload);
+        send_msg(sender->socket_fd, &error_msg);
         return;
     }
-
-    // Handle /w command
-    if(strncmp(trimmed_command,"/w ",3)==0)
+ 
+    *colon = '\0';
+    char *recipient_name = msg->payload;
+    char *message_text = colon + 1;
+ 
+    /* Find recipient */
+    client_t *recipient = find_client_by_name(recipient_name);
+ 
+    if (recipient == NULL) 
     {
-        char *target = trimmed_command + 3;
-        char *space =   strchr(target,' ');
-        if(space == NULL)
-        {
-            char *usage = "To use the /w command, type: /w <username> <message>\n";
-            send((*client).socket_fd,usage,strlen(usage),0);
-            return;
-        }
-        *space = '\0';
-        char *text = space + 1;
-        if(!send_private_message(client,target,text))
-        {
-            char error_msg[NAME_SIZE + 45];
-            snprintf(error_msg,sizeof(error_msg),"user %s not found.\n",target);
-            send((*client).socket_fd,error_msg,strlen(error_msg),0);
-        }
+        Message error_msg = {0};
+        error_msg.version = PROTOCOL_VERSION;
+        error_msg.type = MSG_ERROR;
+        error_msg.message_id = msg->message_id;
+        error_msg.timestamp = time(NULL);
+        snprintf(error_msg.payload, MAX_PAYLOAD_SIZE,"User '%s' not found", recipient_name);
+        error_msg.length = strlen(error_msg.payload);
+        send_msg(sender->socket_fd, &error_msg);
         return;
     }
-    char format[BUFFER_SIZE + NAME_SIZE];
-    snprintf(format,sizeof(format),"%s: %s\n",(*client).name,command);
-    printf("%s",format);
-    broadcast_message(format,client);
+ 
+    /* Send private message to recipient */
+    Message private_msg = {0};
+    private_msg.version = PROTOCOL_VERSION;
+    private_msg.type = MSG_PRIVATE_MSG;
+    private_msg.message_id = msg->message_id;
+    private_msg.timestamp = time(NULL);
+ 
+    snprintf(private_msg.payload, MAX_PAYLOAD_SIZE,"[PRIVATE from %s]: %s", sender->name, message_text);
+    private_msg.length = strlen(private_msg.payload);
+ 
+    if (send_msg(recipient->socket_fd, &private_msg) < 0) 
+    {
+        printf("Failed to send private message to %s\n", recipient->name);
+    } else 
+    {
+        printf("[PRIVATE] %s -> %s: %s\n", sender->name, recipient->name, message_text);
+    }
+}
+ 
+// who command handler :
+void handle_msg_who(client_t *client, Message *msg)
+{
+    if (client == NULL || msg == NULL)
+        return;
+ 
+    Message response = {0};
+    response.version = PROTOCOL_VERSION;
+    response.type = MSG_SERVER;
+    response.message_id = msg->message_id;
+    response.timestamp = time(NULL);
+ 
+    int offset = snprintf(response.payload, MAX_PAYLOAD_SIZE, "Online users: ");
+ 
+    /* Build user list */
+    for (int i = 0; i < MAX_CLIENTS; i++) 
+    {
+        if (clients[i] != NULL) 
+        {
+            int remaining = MAX_PAYLOAD_SIZE - offset - 1;
+            if (remaining <= 0)
+                break;
+ 
+            offset += snprintf(response.payload + offset, remaining,"%s ", clients[i]->name);
+        }
+    }
+ 
+    response.length = strlen(response.payload);
+ 
+    if (send_msg(client->socket_fd, &response) < 0) 
+    {
+        printf("Failed to send user list to %s\n", client->name);
+    } else 
+    {
+        printf("[WHO] %s requested user list\n", client->name);
+    }
+}
+ 
+// handling message disconnect :
+void handle_msg_disconnect(client_t *client, Message *msg)
+{
+    if (client == NULL)
+        return;
+ 
+    printf("[DISCONNECT] %s\n", client->name);
+ 
+    /* Announce departure */
+    Message leave_msg = {0};
+    leave_msg.version = PROTOCOL_VERSION;
+    leave_msg.type = MSG_SERVER;
+    leave_msg.timestamp = time(NULL);
+ 
+    snprintf(leave_msg.payload, MAX_PAYLOAD_SIZE,"📣 %s has left the chat.", client->name);
+    leave_msg.length = strlen(leave_msg.payload);
+ 
+    broadcast_message(&leave_msg, client);
+ 
+    /* Clean up */
+    close(client->socket_fd);
+    remove_client(client);
+    free(client);
 }
