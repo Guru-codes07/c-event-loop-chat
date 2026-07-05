@@ -3,7 +3,7 @@
 #include<string.h>
 #include<arpa/inet.h>
 #include<unistd.h>
-#include<err.h>
+#include<errno.h>
 
 // initialising the CRC32 func() 
 // CRC = cyclic redundancy check algorithm 
@@ -64,4 +64,88 @@ int send_msg(int socketfd,Message *msg)
    }
   
    return 0;
+}
+
+ int receive_msg_nonblocking(int socketfd,MessageBuffer *buff,Message *msg)
+ {
+    // filling the header
+    if(buff->header_bytes<24)
+    {
+        ssize_t n = recv(socketfd,buff->header + buff->header_bytes, 24-buff->header_bytes,MSG_DONTWAIT);
+        if(n<0)
+        {
+            if(errno == EAGAIN || errno ==EWOULDBLOCK)
+            return 0; // if no data avaialable
+            return -1; // if error 
+        }
+        if(n==0)
+        return -2; // error again
+    
+        buff->header_bytes += n;
+        if(buff->header_bytes<24)
+        return 0;
+    }
+   
+    // to get payload size 
+    if(buff->payload_expected == 0)
+    {
+        uint16_t len;
+        memcpy(&len,buff->payload_expected+4,2);
+        buff->payload_expected = ntohs(len);
+
+        if(buff->payload_expected>MAX_PAYLOAD_SIZE)
+        return -1;
+    }
+    
+    // now to fill the payload
+    if(buff->payload_bytes<buff->payload_expected)
+    {
+        ssize_t n = recv(socketfd,buff->payload + buff->payload_bytes,buff->payload_expected - buff->payload_bytes,MSG_DONTWAIT);
+        if(n<0)
+        {
+            if(errno == EAGAIN || errno == EWOULDBLOCK)
+            return 0; // if no data available
+            return-1; // if error
+        }
+        if(n==0)
+        return -2;
+
+        if(buff->payload_bytes<buff->payload_expected)
+        return 0;
+    }
+
+    // message received and parsing 
+    msg->version = buff->header[0];
+    msg->type = buff->header[1];
+    msg->flags = buff->header[2];
+
+    memcpy(&msg->length,buff->header+4,2);
+    msg->length = ntohs(msg->length);
+    
+    uint32_t msg_id;
+    memcpy(&msg_id,buff->header+8,4);
+    msg->message_id = ntoh1(msg_id);
+
+    uint32_t ts;
+    memcpy(&ts,buff->header+12,4);
+    msg->timestamp = ntoh1(ts);
+
+    uint32_t crc;
+    memcpy(&crc,buff->header+16,4);
+    msg->crc32 = ntoh1(crc);
+
+    memcpy(msg->payload,buff->payload,msg->length);
+    msg->payload[msg->length] = '\0';
+
+    // verify the crc again
+    uint32_t calculate = calculate_crc32(msg->payload,msg->length);
+    if(calculate!=msg->crc32)
+    return -1; // error 
+
+    // reset the buffer for the next msg
+    buff->header_bytes = 0;
+    buff->payload_bytes = 0;
+    buff->payload_expected = 0;
+
+    return 1;
 }
