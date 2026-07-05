@@ -153,7 +153,7 @@ int create_server_socket(void)
         error_msg.version = PROTOCOL_VERSION;
         error_msg.type = MSG_ERROR;
         error_msg.timestamp = time(NULL);
-        snprintf(error_msg.payload, MAX_PAYLOAD_SIZE,"Username '%s' already taken", msg.payload);
+        snprintf(error_msg.payload, MAX_PAYLOAD_SIZE,"Username '%.32s' already taken", msg.payload);
         error_msg.length = strlen(error_msg.payload);
         send_msg(client_fd, &error_msg);
         close(client_fd);

@@ -7,6 +7,7 @@
 #define PROTOCOL_H
 #include<stdint.h>
 #include<time.h>
+#include<signal.h>
 #define MAX_PAYLOAD_SIZE 1024
 #define PROTOCOL_VERSION 1
 
