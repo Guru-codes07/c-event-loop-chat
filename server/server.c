@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <time.h>
 #include <errno.h>
+#include <stdarg.h>
  
 /* Custom headers */
 #include "protocol.h"
