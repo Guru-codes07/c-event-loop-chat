@@ -4,7 +4,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <time.h>
- 
+#include<unistd.h>
 #include "commands.h"
 #include "connections.h"
 #include "protocol.h"
@@ -132,7 +132,7 @@ void handle_msg_who(client_t *client, Message *msg)
 }
  
 // handling message disconnect :
-void handle_msg_disconnect(client_t *client, Message *msg)
+void handle_msg_disconnect(client_t *client, Message *msg __attribute__((unused)))
 {
     if (client == NULL)
         return;

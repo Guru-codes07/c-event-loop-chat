@@ -11,6 +11,7 @@
 #include <time.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <signal.h>
  
 /* Custom headers */
 #include "protocol.h"
@@ -243,7 +244,7 @@ int create_server_socket(void)
                 break;
  
             case MSG_DISCONNECT:
-                handle_msg_disconnect(client, &msg);
+                handle_msg_disconnect(client);
                 return;
  
             case MSG_CONNECTION:

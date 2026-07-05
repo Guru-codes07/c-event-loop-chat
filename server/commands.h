@@ -7,7 +7,7 @@
 void handle_msg_chat(client_t *client, Message *msg);
 void handle_msg_private(client_t *client, Message *msg);
 void handle_msg_who(client_t *client, Message *msg);
-void handle_msg_disconnect(client_t *client, Message *msg);
+void handle_msg_disconnect(client_t *client, Message *msg __attribute__((unused)));
 
 
 #endif
