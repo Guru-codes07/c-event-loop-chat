@@ -9,7 +9,7 @@
 #define PORT 8080
 #define SERVER_IP "127.0.0.1"
 #define BUFFER_SIZE 1024
-
+ 
 int main()
 {
     // creating a socket
@@ -24,7 +24,7 @@ int main()
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(PORT);
     inet_pton(AF_INET,SERVER_IP,&server_addr.sin_addr);
-
+ 
     // connecting the socket
     if(connect(client_socket,(struct sockaddr*)&server_addr,sizeof(server_addr))<0)
     {
@@ -32,19 +32,19 @@ int main()
         return 1;
     }
     printf("connected to the server on %s:%d\n",SERVER_IP,PORT);
-
+ 
     // ask for username
     char username[50];
     printf("Enter your username: ");
     fflush(stdout);
-
+ 
     if(fgets(username,sizeof(username),stdin)==NULL)
     {
         close(client_socket);
         return 1;
     }
     username[strcspn(username,"\n")] = '\0';
-
+ 
     // send username to the server
     char username_msg[67];
     snprintf(username_msg,sizeof(username_msg),"%s\n",username);
@@ -61,7 +61,7 @@ int main()
     fds[0].events = POLLIN;
     fds[1].fd = client_socket;
     fds[1].events = POLLIN;
-
+ 
     char buffer[BUFFER_SIZE];
     
     // main poll() loop 
@@ -83,7 +83,7 @@ int main()
          break;
         }
        buffer[strcspn(buffer,"\n")] = '\0';
-
+ 
        // the exit command
        if(strcmp(buffer,"exit")==0)
        {
@@ -94,7 +94,7 @@ int main()
     
     // send message to the server
     char msg_to_send[BUFFER_SIZE];
-    snprintf(msg_to_send,sizeof(msg_to_send),"%s\n",buffer);
+    snprintf(msg_to_send,sizeof(msg_to_send),"%.*s\n", BUFFER_SIZE - 2, buffer);
     if(send(client_socket,msg_to_send,strlen(msg_to_send),0)<0)
     {
         perror("send error");
@@ -103,7 +103,7 @@ int main()
     printf("you: ");
     fflush(stdout);
 }
-
+ 
         if (fds[1].revents & POLLIN) 
         {
             memset(buffer, 0, sizeof(buffer));
@@ -128,4 +128,5 @@ int main()
     close(client_socket);
     return 0;
 }    
+
 
