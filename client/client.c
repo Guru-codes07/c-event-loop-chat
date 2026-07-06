@@ -9,13 +9,13 @@
 #include<stdint.h>
 #include<time.h>
 #include<arpa/inet.h>
- 
+
 #define PORT 8080
 #define SERVER_IP "127.0.0.1"
 #define BUFFER_SIZE 1024
 #define MAX_PAYLOAD_SIZE 1024
 #define PROTOCOL_VERSION 1
- 
+
 /* Message types from protocol.h */
 typedef enum {
     MSG_CONNECTION = 1,
@@ -26,7 +26,7 @@ typedef enum {
     MSG_SERVER = 6,
     MSG_ERROR = 7
 } MessageType;
- 
+
 /* Message structure from protocol.h */
 typedef struct {
     uint8_t version;
@@ -40,7 +40,7 @@ typedef struct {
     uint32_t crc32;
     char payload[MAX_PAYLOAD_SIZE];
 } Message;
- 
+
 /* CRC32 calculation */
 uint32_t calculate_crc32(const char *data, uint16_t length)
 {
@@ -58,7 +58,7 @@ uint32_t calculate_crc32(const char *data, uint16_t length)
     }
     return crc ^ 0xFFFFFFFF;
 }
- 
+
 /* Send a complete message */
 int send_msg(int sockfd, Message *msg)
 {
@@ -91,7 +91,7 @@ int send_msg(int sockfd, Message *msg)
     
     return 0;
 }
- 
+
 /* Receive a complete message (blocking) */
 int recv_msg(int sockfd, Message *msg)
 {
@@ -133,7 +133,55 @@ int recv_msg(int sockfd, Message *msg)
     
     return 0;
 }
- 
+
+/* Parse and send commands */
+void parse_and_send_message(int sockfd, char *input, uint32_t *msg_id)
+{
+    Message msg = {0};
+    msg.version = PROTOCOL_VERSION;
+    msg.message_id = (*msg_id)++;
+    msg.timestamp = time(NULL);
+    
+    /* Check if it's a command */
+    if (input[0] == '/') {
+        if (strncmp(input, "/who", 4) == 0) {
+            /* /who command */
+            msg.type = MSG_WHO_COMMAND;
+            strncpy(msg.payload, "", MAX_PAYLOAD_SIZE - 1);
+            msg.length = 0;
+        } 
+        else if (strncmp(input, "/w ", 3) == 0) {
+            /* /w username:message private message */
+            char *rest = input + 3;  /* Skip "/w " */
+            strncpy(msg.payload, rest, MAX_PAYLOAD_SIZE - 1);
+            msg.type = MSG_PRIVATE_MSG;
+            msg.length = strlen(msg.payload);
+        }
+        else if (strcmp(input, "/help") == 0) {
+            printf("\nAvailable commands:\n");
+            printf("  /who                    - List online users\n");
+            printf("  /w <user>:<message>     - Send private message\n");
+            printf("  /help                   - Show this help\n");
+            printf("  exit                    - Disconnect\n\n");
+            return;
+        }
+        else {
+            printf("Unknown command. Type /help for available commands.\n");
+            return;
+        }
+    } 
+    else {
+        /* Regular chat message */
+        msg.type = MSG_CHAT;
+        strncpy(msg.payload, input, MAX_PAYLOAD_SIZE - 1);
+        msg.length = strlen(msg.payload);
+    }
+    
+    if (send_msg(sockfd, &msg) < 0) {
+        perror("send error");
+    }
+}
+
 int main()
 {
     // creating a socket
@@ -191,7 +239,7 @@ int main()
     char buffer[BUFFER_SIZE];
     uint32_t next_msg_id = 2;
     
-    printf("Connected! Type messages below (type 'exit' to quit):\n");
+    printf("Connected! Type 'exit' to quit, '/help' for commands.\n");
     printf("you: ");
     fflush(stdout);
     
@@ -217,19 +265,9 @@ int main()
                 break;
             }
             
-            // Send message using binary protocol
-            Message chat_msg = {0};
-            chat_msg.version = PROTOCOL_VERSION;
-            chat_msg.type = MSG_CHAT;
-            chat_msg.message_id = next_msg_id++;
-            chat_msg.timestamp = time(NULL);
-            strncpy(chat_msg.payload, buffer, MAX_PAYLOAD_SIZE - 1);
-            chat_msg.length = strlen(chat_msg.payload);
+            // Parse and send message with proper command handling
+            parse_and_send_message(client_socket, buffer, &next_msg_id);
             
-            if (send_msg(client_socket, &chat_msg) < 0) {
-                perror("send error");
-                break;
-            }
             printf("you: ");
             fflush(stdout);
         }
@@ -260,6 +298,5 @@ int main()
     close(client_socket);
     return 0;
 }
-  
 
 
