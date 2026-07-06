@@ -363,23 +363,15 @@ int create_server_socket(void)
         /* Check for data from existing clients */
         for (int i = 1; i < nfds; i++) 
         {
-            if (fds[i].fd == -1)
-                continue;
- 
-            if (fds[i].revents & POLLIN) 
+          if (fds[i].revents & POLLIN) 
+          {
+            client_t *client = fd_to_client[i];  /* Direct lookup! */
+            if (client != NULL) 
             {
-                /* Find corresponding client and handle data */
-                for (int j = 0; j < MAX_CLIENTS; j++) 
-                {
-                    if (clients[j] != NULL && clients[j]->socket_fd == fds[i].fd) 
-                    {
-                        handle_client_data(clients[j]);
-                        break;
-                    }
-                }
+               handle_client_data(client);
             }
+          }
         }
-    }
  
     /* Cleanup on shutdown */
     log_message("Shutting down...\n");

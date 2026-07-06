@@ -9,42 +9,34 @@
  
 /* Global client table */
 client_t *clients[MAX_CLIENTS] = {0};
+client_t *fd_to_client[MAX_CLIENTS + 1];
  
 /* Poll array for monitoring sockets */
 struct pollfd fds[MAX_CLIENTS + 1] = {0};
 int nfds = 0;
 
 // add_client func():
-
 int add_client(client_t *client)
 {
-    if (client == NULL)
-        return 0;
- 
-    for (int i = 0; i < MAX_CLIENTS; i++) 
-    {
-        if (clients[i] == NULL) 
-        {
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        if (clients[i] == NULL) {
             clients[i] = client;
- 
+            
             /* Add to poll array */
-            int slot = i + 1;
-            fds[slot].fd = client->socket_fd;
-            fds[slot].events = POLLIN;
- 
-            if (slot + 1 > nfds) 
-            {
-                nfds = slot + 1;
-            }
- 
-            printf("[INFO] Client added: %s (fd=%d)\n", client->name, client->socket_fd);
+            fds[nfds].fd = client->socket_fd;
+            fds[nfds].events = POLLIN;
+            fd_to_client[nfds] = client;  /* Map index to client */
+            nfds++;
             return 1;
         }
     }
- 
     printf("[INFO] Server full, rejecting client\n");
     return 0;
 }
+ 
+    
+    
+
  
 // remove_client func()
 

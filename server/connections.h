@@ -20,7 +20,8 @@ typedef struct {
 extern client_t *clients[MAX_CLIENTS];
 extern struct pollfd fds[MAX_CLIENTS + 1];
 extern int nfds;
- 
+extern client_t *fd_to_client[MAX_CLIENTS + 1];
+
 /* Client management functions */
 int add_client(client_t *client);
 void remove_client(client_t *client);
