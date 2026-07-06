@@ -16,6 +16,7 @@
 #include "protocol.h"
 #include "connections.h"
 #include "commands.h"
+#include "network.h"
  
 /* Constants */
 #define PORT 8080
@@ -28,17 +29,6 @@ static int running = 1;
 /* ============================================================================
  * UTILITY FUNCTIONS
  * ============================================================================ */
- 
-void strip_newline(char *str)
-{
-    if (str == NULL)
-        return;
- 
-    size_t len = strlen(str);
-    if (len > 0 && str[len - 1] == '\n') {
-        str[len - 1] = '\0';
-    }
-}
  
 void log_message(const char *format, ...)
 {
@@ -55,49 +45,7 @@ void log_message(const char *format, ...)
     va_end(args);
 }
  
-// creating a socket:
-int create_server_socket(void)
-{
-    int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (listen_fd < 0) 
-    {
-        perror("socket failed");
-        return -1;
-    }
- 
-    /* Allow reuse of port */
-    int opt = 1;
-    if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) 
-    {
-        perror("setsockopt failed");
-        close(listen_fd);
-        return -1;
-    }
- 
-    struct sockaddr_in server_addr;
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    server_addr.sin_port = htons(PORT);
- 
-    if (bind(listen_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) 
-    {
-        perror("bind failed");
-        close(listen_fd);
-        return -1;
-    }
- 
-    if (listen(listen_fd, BACKLOG) < 0) 
-    {
-        perror("listen failed");
-        close(listen_fd);
-        return -1;
-    }
- 
-    log_message("Server listening on port %d\n", PORT);
-    return listen_fd;
-}
- 
+
 // CONNECTION HANDLER
  void handle_new_connection(int listen_fd)
 {
@@ -372,6 +320,7 @@ int create_server_socket(void)
             }
           }
         }
+    }
  
     /* Cleanup on shutdown */
     log_message("Shutting down...\n");

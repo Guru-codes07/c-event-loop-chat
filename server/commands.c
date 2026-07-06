@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,7 +23,18 @@ void handle_msg_chat(client_t *client, Message *msg)
     broadcast_msg.message_id = msg->message_id;
     broadcast_msg.timestamp = time(NULL);
  
-    snprintf(broadcast_msg.payload, MAX_PAYLOAD_SIZE,"%s: %s", client->name, msg->payload);
+    /* Reserve space: "username: " + payload, safe truncation */
+    int name_len = strlen(client->name);
+    int available = MAX_PAYLOAD_SIZE - name_len - 3;  /* "name: \0" */
+    
+    if (available < 10) {
+        /* Username too long, just send the message */
+        snprintf(broadcast_msg.payload, MAX_PAYLOAD_SIZE, "%s", msg->payload);
+    } else {
+        /* Safely format with truncation if needed */
+        snprintf(broadcast_msg.payload, MAX_PAYLOAD_SIZE, "%s: %.*s", 
+                 client->name, available, msg->payload);
+    }
     broadcast_msg.length = strlen(broadcast_msg.payload);
  
     printf("[CHAT] %s\n", broadcast_msg.payload);
@@ -68,7 +78,9 @@ void handle_msg_private(client_t *sender, Message *msg)
         error_msg.type = MSG_ERROR;
         error_msg.message_id = msg->message_id;
         error_msg.timestamp = time(NULL);
-        snprintf(error_msg.payload, MAX_PAYLOAD_SIZE,"User '%s' not found", recipient_name);
+        /* Safely truncate recipient name if too long */
+        int available = MAX_PAYLOAD_SIZE - 20;  /* "User '...' not found\0" */
+        snprintf(error_msg.payload, MAX_PAYLOAD_SIZE, "User '%.*s' not found", available, recipient_name);
         error_msg.length = strlen(error_msg.payload);
         send_msg(sender->socket_fd, &error_msg);
         return;
@@ -81,7 +93,19 @@ void handle_msg_private(client_t *sender, Message *msg)
     private_msg.message_id = msg->message_id;
     private_msg.timestamp = time(NULL);
  
-    snprintf(private_msg.payload, MAX_PAYLOAD_SIZE,"[PRIVATE from %s]: %s", sender->name, message_text);
+    /* Reserve space: "[PRIVATE from username]: " + message text */
+    int sender_len = strlen(sender->name);
+    int prefix_len = 18 + sender_len;  /* "[PRIVATE from ]: " = 18 chars */
+    int available = MAX_PAYLOAD_SIZE - prefix_len - 1;
+    
+    if (available < 10) {
+        /* Sender name too long, just send the message text */
+        snprintf(private_msg.payload, MAX_PAYLOAD_SIZE, "%s", message_text);
+    } else {
+        /* Safely format with truncation */
+        snprintf(private_msg.payload, MAX_PAYLOAD_SIZE, "[PRIVATE from %s]: %.*s", 
+                 sender->name, available, message_text);
+    }
     private_msg.length = strlen(private_msg.payload);
  
     if (send_msg(recipient->socket_fd, &private_msg) < 0) 
