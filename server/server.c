@@ -317,11 +317,11 @@ int create_server_socket(void)
     }
  
     /* Register signal handlers */
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = signal_handler;
-    sigaction(SIGINT, &sa, NULL);
-    sigaction(SIGTERM, &sa, NULL);
+    struct sigaction sad;
+    memset(&sad, 0, sizeof(sad));
+    sad.sa_handler = signal_handler;
+    sigaction(SIGINT, &sad, NULL);
+    sigaction(SIGTERM, &sad, NULL);
  
     /* Create server socket */
     int listen_fd = create_server_socket();
