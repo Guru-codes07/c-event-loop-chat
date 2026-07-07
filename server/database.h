@@ -35,7 +35,7 @@ create tables if they dont exist. */
 int db_init(void);
 
 /* store a public chat message */
-int db_store_mesage(const char *sender_name,const char *message_text,time_t timestamp,uint32_t message_id);
+int db_store_message(const char *sender_name,const char *message_text,time_t timestamp,uint32_t message_id);
 
 /* store a private chat message */
 int db_store_private_message(const char *sender_name,const char *recipient_name,const char *message_text,time_t timestamp,uint32_t messsasge_id);

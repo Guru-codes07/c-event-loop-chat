@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <errno.h>
+#include <stdarg.h>
 
 // declaring the global variables:
 static sqlite3 *db = NULL;
@@ -374,7 +375,7 @@ StoredMessage *db_get_messages_by_date(int year, int month, int day, int *out_co
     return results;
 }
 
-StorePrivateMessage *db_get_private_history(const char *user1, const char *user2,int limit, int *out_count)
+StoredPrivateMessage *db_get_private_history(const char *user1, const char *user2,int limit, int *out_count)
 {
     if (db == NULL) 
     {
@@ -427,7 +428,7 @@ StorePrivateMessage *db_get_private_history(const char *user1, const char *user2
         return NULL;
     }
     
-    StorePrivateMessage *results = malloc(count * sizeof(StorePrivateMessage));
+    StoredPrivateMessage *results = malloc(count * sizeof(StoredPrivateMessage));
     if (results == NULL) {
         set_error("Memory allocation failed");
         sqlite3_finalize(stmt);
