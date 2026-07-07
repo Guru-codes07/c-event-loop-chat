@@ -18,14 +18,25 @@ int nfds = 0;
 // add_client func():
 int add_client(client_t *client)
 {
-    for (int i = 0; i < MAX_CLIENTS; i++) {
-        if (clients[i] == NULL) {
+    if (nfds >= MAX_CLIENTS + 1) 
+    {
+        /* Poll array is full; should not happen if clients[] and nfds
+         * stay in sync, but guard against it anyway. */
+        printf("[INFO] Server full, rejecting client\n");
+        return 0;
+    }
+
+    for (int i = 0; i < MAX_CLIENTS; i++)
+     {
+        if (clients[i] == NULL) 
+        {
             clients[i] = client;
-            
+
             /* Add to poll array */
             fds[nfds].fd = client->socket_fd;
             fds[nfds].events = POLLIN;
             fd_to_client[nfds] = client;  /* Map index to client */
+            client->poll_index = nfds;    /* Client remembers its own slot */
             nfds++;
             return 1;
         }
@@ -39,24 +50,43 @@ int add_client(client_t *client)
 
  
 // remove_client func()
-
 void remove_client(client_t *client)
 {
     if (client == NULL)
         return;
- 
-    /* Find and remove from clients array */
-    for (int i = 0; i < MAX_CLIENTS; i++) 
+
+    /* Find and remove from the logical clients[] table */
+    for (int i = 0; i < MAX_CLIENTS; i++)
     {
-        if (clients[i] == client) 
+        if (clients[i] == client)
         {
             clients[i] = NULL;
-            fds[i + 1].fd = -1;
-            printf("[INFO] Client removed: %s\n", client->name);
             break;
         }
     }
+
+    /* Compact the poll array using this client's own remembered slot,
+     * instead of assuming clients[] index and fds[] index line up
+     * (they don't, once clients disconnect/reconnect out of order). */
+    int idx = client->poll_index;
+    int last = nfds - 1;
+
+    if (idx != last)
+    {
+        /* Move the last live entry into the freed slot */
+        fds[idx] = fds[last];
+        fd_to_client[idx] = fd_to_client[last];
+        fd_to_client[idx]->poll_index = idx;  /* moved client learns its new home */
+    }
+
+    fds[last].fd = -1;
+    fd_to_client[last] = NULL;
+    nfds--;
+
+    printf("[INFO] Client removed: %s\n", client->name);
 }
+
+
  
 // client by name 
 

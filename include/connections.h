@@ -14,6 +14,7 @@ typedef struct {
     MessageBuffer recv_buf;      /* For partial message buffering */
     uint32_t next_message_id;    /* Outgoing message counter */
     time_t last_activity;
+    int poll_index;
 } client_t;
  
 /* Global client table — defined in connections.c */
