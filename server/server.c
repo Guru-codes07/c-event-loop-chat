@@ -11,12 +11,14 @@
 #include <time.h>
 #include <errno.h>
 #include <stdarg.h>
+
  
 /* Custom headers */
 #include "protocol.h"
 #include "connections.h"
 #include "commands.h"
 #include "network.h"
+#include "database.h"
  
 /* Constants */
 #define PORT 8080
@@ -189,6 +191,10 @@ void log_message(const char *format, ...)
             case MSG_WHO_COMMAND:
                 handle_msg_who(client, &msg);
                 break;
+
+            case MSG_HISTORY_COMMAND:
+                handle_msg_history(client,&msg);
+                break;    
  
             case MSG_DISCONNECT:
                 handle_msg_disconnect(client,&msg);
@@ -278,6 +284,14 @@ void log_message(const char *format, ...)
         fprintf(stderr, "Failed to create listening socket\n");
         return 1;
     }
+
+    // initialising the database
+    if(db_init()<0)
+    {
+        fprintf(stderr,"failed to initialise the database: %s\n",db_get_error());
+        close(listen_fd);
+        return 1;
+    }
  
     /* Initialize poll array */
     memset(fds, 0, sizeof(fds));
@@ -335,6 +349,12 @@ void log_message(const char *format, ...)
     }
  
     close(listen_fd);
+
+    // closing the database
+    if(db_cleanup()<0)
+    {
+        fprintf(stderr,"database cleanup error: %s\n",db_get_error());
+    }
     log_message("Server stopped\n");
  
     return 0;

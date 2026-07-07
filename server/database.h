@@ -25,7 +25,7 @@ typedef struct
     char message_text[1024];
     time_t timestamp;
     uint32_t message_id;
-}StorePrivateMessage;
+}StoredPrivateMessage;
 
 /* Function Declarations */
 

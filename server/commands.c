@@ -7,8 +7,9 @@
 #include "commands.h"
 #include "connections.h"
 #include "protocol.h"
- 
-// chat message handler
+#include "database.h" 
+
+// to handle  message chat 
 void handle_msg_chat(client_t *client, Message *msg)
 {
     if (client == NULL || msg == NULL)
@@ -27,21 +28,31 @@ void handle_msg_chat(client_t *client, Message *msg)
     int name_len = strlen(client->name);
     int available = MAX_PAYLOAD_SIZE - name_len - 3;  /* "name: \0" */
     
-    if (available < 10) {
+    if (available < 10) 
+    {
         /* Username too long, just send the message */
         snprintf(broadcast_msg.payload, MAX_PAYLOAD_SIZE, "%s", msg->payload);
-    } else {
+    } 
+    else 
+    {
         /* Safely format with truncation if needed */
-        snprintf(broadcast_msg.payload, MAX_PAYLOAD_SIZE, "%s: %.*s", 
-                 client->name, available, msg->payload);
+        snprintf(broadcast_msg.payload, MAX_PAYLOAD_SIZE, "%s: %.*s",client->name, available, msg->payload);
     }
     broadcast_msg.length = strlen(broadcast_msg.payload);
  
     printf("[CHAT] %s\n", broadcast_msg.payload);
+    
+    // to store messages
+    if (db_store_message(client->name, msg->payload, broadcast_msg.timestamp,broadcast_msg.message_id) < 0) 
+    {
+        printf("[WARN] Failed to store message to database: %s\n", db_get_error());
+        /* Note: We still broadcast the message even if storage fails */
+    }
+    
     broadcast_message(&broadcast_msg, NULL);
 }
- 
-// handling private message
+
+// private message handler:
 void handle_msg_private(client_t *sender, Message *msg)
 {
     if (sender == NULL || msg == NULL)
@@ -98,10 +109,12 @@ void handle_msg_private(client_t *sender, Message *msg)
     int prefix_len = 18 + sender_len;  /* "[PRIVATE from ]: " = 18 chars */
     int available = MAX_PAYLOAD_SIZE - prefix_len - 1;
     
-    if (available < 10) {
+    if (available < 10) 
+    {
         /* Sender name too long, just send the message text */
         snprintf(private_msg.payload, MAX_PAYLOAD_SIZE, "%s", message_text);
-    } else {
+    } else 
+    {
         /* Safely format with truncation */
         snprintf(private_msg.payload, MAX_PAYLOAD_SIZE, "[PRIVATE from %s]: %.*s", 
                  sender->name, available, message_text);
@@ -111,13 +124,19 @@ void handle_msg_private(client_t *sender, Message *msg)
     if (send_msg(recipient->socket_fd, &private_msg) < 0) 
     {
         printf("Failed to send private message to %s\n", recipient->name);
-    } else 
+    } 
+    else 
     {
         printf("[PRIVATE] %s -> %s: %s\n", sender->name, recipient->name, message_text);
+        if (db_store_private_message(sender->name, recipient->name, message_text,time(NULL), msg->message_id) < 0) 
+        {
+            printf("[WARN] Failed to store private message to database: %s\n",db_get_error());
+            /* We still deliver the message even if storage fails */
+        }
     }
 }
- 
-// who command handler :
+
+// handles the WHO command:
 void handle_msg_who(client_t *client, Message *msg)
 {
     if (client == NULL || msg == NULL)
@@ -149,13 +168,75 @@ void handle_msg_who(client_t *client, Message *msg)
     if (send_msg(client->socket_fd, &response) < 0) 
     {
         printf("Failed to send user list to %s\n", client->name);
-    } else 
+    } 
+    else 
     {
         printf("[WHO] %s requested user list\n", client->name);
     }
 }
- 
-// handling message disconnect :
+
+// to handle message history :
+void handle_msg_history(client_t *client, Message *msg)
+{
+    if (client == NULL || msg == NULL)
+        return;
+
+    /* Query recent 20 messages from database */
+    int count = 0;
+    StoredMessage *messages = db_get_recent_messages(20, &count);
+
+    if (count == 0) 
+    {
+        /* No messages in history */
+        Message response = {0};
+        response.version = PROTOCOL_VERSION;
+        response.type = MSG_SERVER;
+        response.message_id = msg->message_id;
+        response.timestamp = time(NULL);
+        snprintf(response.payload, MAX_PAYLOAD_SIZE, "No chat history available");
+        response.length = strlen(response.payload);
+        send_msg(client->socket_fd, &response);
+        return;
+    }
+
+    /* Build response with message history */
+    Message response = {0};
+    response.version = PROTOCOL_VERSION;
+    response.type = MSG_SERVER;
+    response.message_id = msg->message_id;
+    response.timestamp = time(NULL);
+
+    int offset = snprintf(response.payload, MAX_PAYLOAD_SIZE,"=== Chat History (Last %d messages) ===\n", count);
+
+    /* Messages are returned in reverse order (newest first)
+     * So we iterate backwards to display chronologically (oldest first) */
+    for (int i = count - 1; i >= 0 && offset < MAX_PAYLOAD_SIZE - 150; i--) 
+    {
+        struct tm *tm_info = localtime(&messages[i].timestamp);
+        char time_str[32];
+        strftime(time_str, sizeof(time_str), "%H:%M:%S", tm_info);
+
+        int remaining = MAX_PAYLOAD_SIZE - offset - 1;
+        offset += snprintf(response.payload + offset, remaining,"[%s] %s: %s\n", time_str,messages[i].sender_name,messages[i].message_text);
+    }
+
+    response.length = strlen(response.payload);
+    
+    if (send_msg(client->socket_fd, &response) < 0) 
+    {
+        printf("Failed to send history to %s\n", client->name);
+    } 
+    else 
+    {
+        printf("[HISTORY] %s requested chat history\n", client->name);
+    }
+    
+    /* Clean up allocated memory */
+    free(messages);
+}
+
+
+// to handle message disconnect:
 void handle_msg_disconnect(client_t *client, Message *msg __attribute__((unused)))
 {
     if (client == NULL)
@@ -179,3 +260,5 @@ void handle_msg_disconnect(client_t *client, Message *msg __attribute__((unused)
     remove_client(client);
     free(client);
 }
+
+

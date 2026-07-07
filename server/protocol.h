@@ -22,7 +22,8 @@ typedef enum
     MSG_WHO_COMMAND = 4,
     MSG_DISCONNECT = 5,
     MSG_SERVER = 6,
-    MSG_ERROR = 7
+    MSG_ERROR = 7,
+    MSG_HISTORY_COMMAND = 8
 }MessageType;
  
 // flags:

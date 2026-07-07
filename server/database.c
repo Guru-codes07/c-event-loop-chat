@@ -575,8 +575,7 @@ int db_get_stats(int64_t *out_msg_count, int64_t *out_pm_count)
         return -1;
     }
     
-    if (sqlite3_step(stmt) != SQLITE_ROW) 
-    {
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
         set_error("Failed to fetch private message count");
         sqlite3_finalize(stmt);
         return -1;
@@ -595,8 +594,7 @@ int db_cleanup(void)
     
     int rc = sqlite3_close(db);
     
-    if (rc != SQLITE_OK) 
-    {
+    if (rc != SQLITE_OK) {
         set_error("Failed to close database: %s", sqlite3_errmsg(db));
         return -1;
     }
