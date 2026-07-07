@@ -2,7 +2,6 @@
 /* its better to send messages in raw bytes instead of human
  readable form, so we implement a binary protocol.
  its efficient , fast and provides type safety.  */
- 
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 #include<stdint.h>
