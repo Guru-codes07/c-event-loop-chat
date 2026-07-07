@@ -43,7 +43,7 @@ int db_store_message(const char *sender_name,const char *message_text,time_t tim
 int db_store_private_message(const char *sender_name,const char *recipient_name,const char *message_text,time_t timestamp,uint32_t messsasge_id);
 
 /* retrieve a public message */
-StoredMessage *db_get_recent_messsages(int limit,int *out_count);
+StoredMessage *db_get_recent_messages(int limit,int *out_count);
 
 /* retrieve chat history for a specific date */
 StoredMessage *db_get_messages_by_date(int year , int month ,int day, int *out_count);

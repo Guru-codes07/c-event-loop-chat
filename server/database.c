@@ -5,7 +5,7 @@
 #include <time.h>
 #include <errno.h>
 #include <stdarg.h>
-#include <stdarg.h>
+
 
 // declaring the global variables:
 static sqlite3 *db = NULL;
