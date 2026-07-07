@@ -29,6 +29,8 @@ typedef struct
 
 /* Function Declarations */
 
+const char *db_get_error(void);
+
 /* initialising the database .
 creating and opening the database.
 create tables if they dont exist. */
@@ -47,7 +49,7 @@ StoredMessage *db_get_recent_messsages(int limit,int *out_count);
 StoredMessage *db_get_messages_by_date(int year , int month ,int day, int *out_count);
 
 /* retrieve chat history of a private chat between two users */
-StoredMessage *db_get_private_history(const char *user1,const char *user2, int *out_count);
+StoredPrivateMessage *db_get_private_history(const char *user1, const char *user2, int limit, int *out_count);
 
 /* to delete old messages after a particular number of days */
 int db_cleanup_old_messages(int days_old);
