@@ -21,7 +21,7 @@ typedef struct
 {
     int64_t db_id;
     char sender_name[67];
-    char recepient_name[67];
+    char recipient_name[67];
     char message_text[1024];
     time_t timestamp;
     uint32_t message_id;
