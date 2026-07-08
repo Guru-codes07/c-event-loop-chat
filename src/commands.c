@@ -49,7 +49,7 @@ void handle_msg_chat(client_t *client, Message *msg)
         /* Note: We still broadcast the message even if storage fails */
     }
     
-    broadcast_message(&broadcast_msg, NULL);
+    broadcast_message(&broadcast_msg, client);
 }
 
 // private message handler:
