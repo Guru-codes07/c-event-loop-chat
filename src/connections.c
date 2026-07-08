@@ -49,7 +49,10 @@ int add_client(client_t *client)
     
 
  
-// remove_client func()
+/**
+ * Remove client from server tables and free resources
+ * Handles SSL cleanup and poll array compaction
+ */
 void remove_client(client_t *client)
 {
     if (client == NULL)
@@ -63,6 +66,13 @@ void remove_client(client_t *client)
             clients[i] = NULL;
             break;
         }
+    }
+
+    /* Free SSL resources */
+    if (client->ssl != NULL) {
+        SSL_shutdown(client->ssl);
+        SSL_free(client->ssl);
+        client->ssl = NULL;
     }
 
     /* Compact the poll array using this client's own remembered slot,
@@ -106,8 +116,10 @@ client_t *find_client_by_name(const char *name)
     return NULL;
 }
  
-// broadcasting the message
-
+/**
+ * Broadcast message to all connected clients except one
+ * Sends message over TLS
+ */
 void broadcast_message(Message *msg, client_t *exclude)
 {
     if (msg == NULL)
@@ -116,9 +128,9 @@ void broadcast_message(Message *msg, client_t *exclude)
     for (int i = 0; i < MAX_CLIENTS; i++) {
         if (clients[i] != NULL && clients[i] != exclude) 
         {
-            if (send_msg(clients[i]->socket_fd, msg) < 0) 
+            if (send_msg(clients[i]->socket_fd, clients[i]->ssl, msg) < 0) 
             {
-        printf("[ERROR] Failed to send message to %s\n", clients[i]->name);
+                printf("[ERROR] Failed to send message to %s\n", clients[i]->name);
             }
         }
     }
