@@ -4,10 +4,13 @@
  its efficient , fast and provides type safety.  */
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
-#include<stdint.h>
-#include<time.h>
-#include<signal.h>
-#include<sys/socket.h>
+#include <stdint.h>
+#include <time.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+ 
 #define MAX_PAYLOAD_SIZE 1024
 #define PROTOCOL_VERSION 1
  
@@ -44,9 +47,9 @@ typedef struct
     char payload[MAX_PAYLOAD_SIZE + 1];
 }Message;
  
-// serialization , declaring the functions that i am gonna use 
- int send_msg(int socketfd,Message *msg); // to send messages.
- int recv_msg(int socketfd,Message *msg); // to recieve messages.
+/* Serialization functions - now with TLS support */
+int send_msg(int socketfd, SSL *ssl, Message *msg);
+int recv_msg(int socketfd, SSL *ssl, Message *msg);
  
 // custom header struct
 typedef struct
@@ -58,10 +61,11 @@ typedef struct
    uint16_t payload_expected;  // expected payload size
 }MessageBuffer;
  
-// func() for event loop
-int receive_msg_nonblocking(int socketfd,MessageBuffer *buf,Message *msg);
+/* Non-blocking receive for event loop */
+int receive_msg_nonblocking(int socketfd, SSL *ssl, MessageBuffer *buf, Message *msg);
  
 // CRC32 algorithm function
 uint32_t calculate_crc32(const char *data,uint16_t length);
  
 #endif
+
