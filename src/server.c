@@ -17,7 +17,7 @@
 #include "protocol.h"
 #include "connections.h"
 #include "commands.h"
-#include "network.h"
+#include "TLS.h"
 #include "database.h"
  
 /* Constants */
@@ -48,8 +48,11 @@ void log_message(const char *format, ...)
 }
  
 
-// CONNECTION HANDLER
- void handle_new_connection(int listen_fd)
+/**
+ * Handle new connection
+ * Accepts socket, performs TLS handshake, then receives username
+ */
+void handle_new_connection(int listen_fd)
 {
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
@@ -60,13 +63,43 @@ void log_message(const char *format, ...)
         return;
     }
  
-    log_message("New connection from %s:%d\n",inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+    log_message("New connection from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+    
+    /* Create SSL object for this connection */
+    SSL *ssl = SSL_new(tls_server_ctx);
+    if (ssl == NULL) {
+        log_message("Failed to create SSL object\n");
+        close(client_fd);
+        return;
+    }
+    
+    /* Associate socket with SSL */
+    if (!SSL_set_fd(ssl, client_fd)) {
+        log_message("Failed to set SSL file descriptor\n");
+        SSL_free(ssl);
+        close(client_fd);
+        return;
+    }
+    
+    /* Perform TLS handshake (blocking) */
+    int hs_result = tls_handshake(ssl, 1);  /* 1 = server */
+    if (hs_result != 1) {
+        log_message("TLS handshake failed\n");
+        SSL_free(ssl);
+        close(client_fd);
+        return;
+    }
+    
+    log_message("TLS handshake successful for %s:%d\n",
+                inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
  
-    /* Receive MSG_CONNECTION message with username */
-    Message msg;
-    if (recv_msg(client_fd, &msg) < 0) 
+    /* Receive MSG_CONNECTION message with username (now over TLS) */
+    Message msg = {0};
+    if (recv_msg(client_fd, ssl, &msg) < 0) 
     {
         log_message("Failed to receive connection message\n");
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
         close(client_fd);
         return;
     }
@@ -75,6 +108,8 @@ void log_message(const char *format, ...)
     if (msg.type != MSG_CONNECTION) 
     {
         log_message("Expected MSG_CONNECTION, got type %d\n", msg.type);
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
         close(client_fd);
         return;
     }
@@ -91,7 +126,9 @@ void log_message(const char *format, ...)
         error_msg.timestamp = time(NULL);
         strncpy(error_msg.payload, "Username cannot be empty", MAX_PAYLOAD_SIZE - 1);
         error_msg.length = strlen(error_msg.payload);
-        send_msg(client_fd, &error_msg);
+        send_msg(client_fd, ssl, &error_msg);
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
         close(client_fd);
         return;
     }
@@ -105,7 +142,9 @@ void log_message(const char *format, ...)
         error_msg.timestamp = time(NULL);
         snprintf(error_msg.payload, MAX_PAYLOAD_SIZE,"Username '%.32s' already taken", msg.payload);
         error_msg.length = strlen(error_msg.payload);
-        send_msg(client_fd, &error_msg);
+        send_msg(client_fd, ssl, &error_msg);
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
         close(client_fd);
         return;
     }
@@ -115,12 +154,16 @@ void log_message(const char *format, ...)
     if (new_client == NULL) 
     {
         perror("malloc failed");
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
         close(client_fd);
         return;
     }
  
     memset(new_client, 0, sizeof(client_t));
     new_client->socket_fd = client_fd;
+    new_client->ssl = ssl;  /* Store SSL object */
+    new_client->tls_handshake_complete = 1;
     new_client->next_message_id = 1;
     new_client->last_activity = time(NULL);
     strncpy(new_client->name, msg.payload, NAME_SIZE - 1);
@@ -135,13 +178,15 @@ void log_message(const char *format, ...)
         error_msg.timestamp = time(NULL);
         strncpy(error_msg.payload, "Server is full. Try again later.", MAX_PAYLOAD_SIZE - 1);
         error_msg.length = strlen(error_msg.payload);
-        send_msg(client_fd, &error_msg);
+        send_msg(client_fd, ssl, &error_msg);
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
         close(client_fd);
         free(new_client);
         return;
     }
  
-    /* Send welcome message */
+    /* Send welcome message over TLS */
     Message welcome = {0};
     welcome.version = PROTOCOL_VERSION;
     welcome.type = MSG_SERVER;
@@ -149,7 +194,7 @@ void log_message(const char *format, ...)
     welcome.timestamp = time(NULL);
     snprintf(welcome.payload, MAX_PAYLOAD_SIZE,"Welcome %s! Type /who to see online users, /w <user>:<msg> to whisper.",new_client->name);
     welcome.length = strlen(welcome.payload);
-    send_msg(new_client->socket_fd, &welcome);
+    send_msg(new_client->socket_fd, new_client->ssl, &welcome);
  
     /* Announce join to all clients */
     Message join_msg = {0};
@@ -163,14 +208,17 @@ void log_message(const char *format, ...)
     broadcast_message(&join_msg, new_client);
 }
  
-// CLIENT DATA HANDLER
- void handle_client_data(client_t *client)
+/**
+ * Handle data from existing client
+ * Receives messages and routes to appropriate handlers
+ */
+void handle_client_data(client_t *client)
 {
     if (client == NULL)
         return;
  
-    Message msg;
-    int ret = receive_msg_nonblocking(client->socket_fd, &client->recv_buf, &msg);
+    Message msg = {0};
+    int ret = receive_msg_nonblocking(client->socket_fd, client->ssl, &client->recv_buf, &msg);
  
     if (ret == 1) 
     {
@@ -240,7 +288,7 @@ void log_message(const char *format, ...)
         error_msg.timestamp = time(NULL);
         strncpy(error_msg.payload, "Protocol error detected", MAX_PAYLOAD_SIZE - 1);
         error_msg.length = strlen(error_msg.payload);
-        send_msg(client->socket_fd, &error_msg);
+        send_msg(client->socket_fd, client->ssl, &error_msg);
  
         close(client->socket_fd);
         remove_client(client);
@@ -261,9 +309,23 @@ void log_message(const char *format, ...)
     }
 }
 
- // MAIN EVENT LOOP
- int main(void)
+ /**
+ * Main event loop
+ * Usage: ./server [cert_file] [key_file]
+ * 
+ * Default paths: certs/server.crt, certs/server.key
+ */
+int main(int argc, char *argv[])
 {
+    const char *cert_file = "certs/server.crt";
+    const char *key_file = "certs/server.key";
+    
+    /* Allow custom cert/key paths as arguments */
+    if (argc >= 3) {
+        cert_file = argv[1];
+        key_file = argv[2];
+    }
+    
     /* Initialize clients array */
     for (int i = 0; i < MAX_CLIENTS; i++) 
     {
@@ -276,20 +338,28 @@ void log_message(const char *format, ...)
     sa.sa_handler = signal_handler;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
+    
+    /* Initialize TLS */
+    if (tls_init_server(cert_file, key_file) < 0) {
+        fprintf(stderr, "Failed to initialize TLS\n");
+        return 1;
+    }
  
     /* Create server socket */
     int listen_fd = create_server_socket();
     if (listen_fd < 0) 
     {
         fprintf(stderr, "Failed to create listening socket\n");
+        tls_cleanup();
         return 1;
     }
 
-    // initialising the database
-    if(db_init()<0)
+    /* Initialize database */
+    if (db_init() < 0)
     {
-        fprintf(stderr,"failed to initialise the database: %s\n",db_get_error());
+        fprintf(stderr, "Failed to initialize database: %s\n", db_get_error());
         close(listen_fd);
+        tls_cleanup();
         return 1;
     }
  
@@ -344,17 +414,25 @@ void log_message(const char *format, ...)
         if (clients[i] != NULL) 
         {
             close(clients[i]->socket_fd);
+            if (clients[i]->ssl != NULL) {
+                SSL_shutdown(clients[i]->ssl);
+                SSL_free(clients[i]->ssl);
+            }
             free(clients[i]);
         }
     }
  
     close(listen_fd);
 
-    // closing the database
-    if(db_cleanup()<0)
+    /* Close database */
+    if (db_cleanup() < 0)
     {
-        fprintf(stderr,"database cleanup error: %s\n",db_get_error());
+        fprintf(stderr, "Database cleanup error: %s\n", db_get_error());
     }
+    
+    /* Cleanup TLS */
+    tls_cleanup();
+    
     log_message("Server stopped\n");
  
     return 0;
