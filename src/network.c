@@ -12,6 +12,7 @@
 //custom header files:
 #include "network.h"
 #include "common.h"
+#include "protocol.h"
 
 int create_server_socket(void)
 {

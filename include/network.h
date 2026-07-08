@@ -29,6 +29,7 @@ int perform_ssl_handshake(SSL *ssl, int is_server);
 int send_msg(int socket_fd, SSL *ssl, Message *msg);
 int recv_msg(int socket_fd, SSL *ssl, Message *msg);
 
+
 /* removing \n or \r from a string*/
 void strip_newline(char *str);
 
