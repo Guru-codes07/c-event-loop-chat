@@ -3,7 +3,7 @@
 
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c99 -D_POSIX_C_SOURCE=200809L
-LDFLAGS = -lsqlite3
+LDFLAGS = -lsqlite3 -lssl -lcrypto
 
 # Directories
 SRC_DIR = src
@@ -16,6 +16,7 @@ SERVER_SRCS = $(SRC_DIR)/server.c \
               $(SRC_DIR)/protocol.c \
               $(SRC_DIR)/connections.c \
               $(SRC_DIR)/commands.c \
+              $(SRC_DIR)/tls.c \
               $(SRC_DIR)/network.c \
               $(SRC_DIR)/database.c
 
@@ -54,7 +55,7 @@ $(SERVER_BIN): $(SERVER_OBJS)
 $(CLIENT_BIN): $(CLIENT_OBJS)
 	@mkdir -p $(BUILD_DIR)
 	@echo "[LD] Linking client..."
-	@$(CC) $(CFLAGS) -o $@ $(CLIENT_OBJS)
+	@$(CC) $(CFLAGS) -o $@ $(CLIENT_OBJS) $(LDFLAGS)
 	@echo "[OK] Client built: $@"
 
 # Compile any .c into build/obj/, generating a matching .d dependency file
