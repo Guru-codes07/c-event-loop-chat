@@ -99,7 +99,7 @@ static int send_all(SSL *ssl, const void *buffer, size_t length)
         {
             int err = SSL_get_error(ssl, bytes);
             if (err == SSL_ERROR_WANT_WRITE) {
-                usleep(10000);
+                sleep(10000);
                 continue;
             }
             perror("[CLIENT] SSL_write");
@@ -131,7 +131,7 @@ static int recv_all(SSL *ssl, void *buffer, size_t length)
                 return -2;  /* Connection closed */
             }
             if (err == SSL_ERROR_WANT_READ) {
-                usleep(10000);
+                sleep(10000);
                 continue;
             }
             perror("[CLIENT] SSL_read");

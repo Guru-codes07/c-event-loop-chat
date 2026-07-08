@@ -258,7 +258,6 @@ int receive_msg_nonblocking(int sockfd, SSL *ssl, MessageBuffer *buf, Message *m
     if (buf->header_bytes < 24) {
         if (ssl != NULL) {
             /* Non-blocking TLS receive */
-            SSL_set_connect_state(ssl);  /* Ensure non-blocking mode */
             n = SSL_read(ssl, buf->header + buf->header_bytes, 24 - buf->header_bytes);
             
             if (n <= 0) {

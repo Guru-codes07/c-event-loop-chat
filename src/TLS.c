@@ -34,12 +34,12 @@ int tls_init_server(const char *cert_file, const char *key_file)
         fprintf(stderr, "[TLS] Server context already initialized\n");
         return -1;
     }
-    
+
     if (cert_file == NULL || key_file == NULL) {
         fprintf(stderr, "[TLS] Certificate and key files required\n");
         return -1;
     }
-    
+
     /* Initialize OpenSSL library (call once) */
     static int ssl_initialized = 0;
     if (!ssl_initialized) {
@@ -48,48 +48,55 @@ int tls_init_server(const char *cert_file, const char *key_file)
         OpenSSL_add_all_algorithms();
         ssl_initialized = 1;
     }
-    
-    /* Create server context using TLS 1.2 or higher */
+
+    /* Create server context */
     tls_server_ctx = SSL_CTX_new(TLS_server_method());
     if (tls_server_ctx == NULL) {
         fprintf(stderr, "[TLS] Failed to create server context: %s\n",
                 tls_get_error_string());
         return -1;
     }
-    
-    /* Set minimum TLS version */
+
+    /* Require TLS 1.2 or newer */
     SSL_CTX_set_min_proto_version(tls_server_ctx, TLS1_2_VERSION);
-    
-    /* Load certificate file */
-    if (SSL_CTX_use_certificate_file(tls_server_ctx, cert_file, SSL_FILETYPE_PEM) <= 0) {
-        fprintf(stderr, "[TLS] Failed to load certificate '%s': %s\n",
-                cert_file, tls_get_error_string());
+
+    /* Load server certificate */
+    if (SSL_CTX_use_certificate_file(tls_server_ctx,cert_file,SSL_FILETYPE_PEM) <= 0)
+    {
+        fprintf(stderr,
+                "[TLS] Failed to load certificate '%s': %s\n",
+                cert_file,
+                tls_get_error_string());
+
         SSL_CTX_free(tls_server_ctx);
         tls_server_ctx = NULL;
         return -1;
     }
-    
-    /* Load private key file */
-    if (SSL_CTX_use_PrivateKey_file(tls_server_ctx, key_file, SSL_FILETYPE_PEM) <= 0) {
-        fprintf(stderr, "[TLS] Failed to load private key '%s': %s\n",
-                key_file, tls_get_error_string());
+
+    /* Load private key */
+    if (SSL_CTX_use_PrivateKey_file(tls_server_ctx,key_file,SSL_FILETYPE_PEM) <= 0)
+    {
+        fprintf(stderr,"[TLS] Failed to load private key '%s': %s\n",key_file, tls_get_error_string());
+
         SSL_CTX_free(tls_server_ctx);
         tls_server_ctx = NULL;
         return -1;
     }
-    
-    /* Verify that cert and key match */
-    if (!SSL_CTX_check_private_key(tls_server_ctx)) {
-        fprintf(stderr, "[TLS] Private key does not match certificate\n");
+
+    /* Verify certificate and key match */
+    if (!SSL_CTX_check_private_key(tls_server_ctx)) 
+    {
+        fprintf(stderr,"[TLS] Private key does not match certificate\n");
+
         SSL_CTX_free(tls_server_ctx);
         tls_server_ctx = NULL;
         return -1;
     }
-    
+
     printf("[TLS] Server context initialized successfully\n");
     printf("[TLS] Certificate: %s\n", cert_file);
-    printf("[TLS] Private key: %s\n", key_file);
-    
+    printf("[TLS] Private Key: %s\n", key_file);
+
     return 0;
 }
 
