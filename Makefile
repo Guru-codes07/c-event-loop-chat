@@ -16,7 +16,7 @@ SERVER_SRCS = $(SRC_DIR)/server.c \
               $(SRC_DIR)/protocol.c \
               $(SRC_DIR)/connections.c \
               $(SRC_DIR)/commands.c \
-              $(SRC_DIR)/tls.c \
+              $(SRC_DIR)/TLS.c \
               $(SRC_DIR)/network.c \
               $(SRC_DIR)/database.c
 

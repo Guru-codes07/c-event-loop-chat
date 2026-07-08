@@ -4,15 +4,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include "protocol.h"
- 
-// connection now uses SSL object struct
-typedef struct 
-{
-   int socket_fd;
-   SSL *ssl;
-   char name[32];
-   int aunthenticated;
-}client_t;
+#include "connections.h"
  
 // global SSL context which is shared by all connections
 extern SSL_CTX *ssl_ctx;

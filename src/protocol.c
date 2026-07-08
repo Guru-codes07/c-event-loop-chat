@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/socket.h>
+#include <time.h>
 
 /**
  * Send all bytes over TLS or raw socket
@@ -25,9 +26,17 @@ static int send_all(int sockfd, SSL *ssl, const void *buffer, size_t length)
             if (bytes <= 0) {
                 int err = SSL_get_error(ssl, bytes);
                 
-                if (err == SSL_ERROR_WANT_WRITE) {
-                    /* Retry — this shouldn't happen in blocking mode but handle it */
-                    usleep(10000);
+                if (err == SSL_ERROR_WANT_WRITE) 
+                {
+        
+                    
+                 struct timespec ts = 
+                 {
+                  .tv_sec = 0,
+                  .tv_nsec = 10000000   // 10 ms
+                 };
+
+                 nanosleep(&ts, NULL);
                     continue;
                 }
                 
@@ -76,7 +85,7 @@ static int recv_all(int sockfd, SSL *ssl, void *buffer, size_t length)
                 
                 if (err == SSL_ERROR_WANT_READ) {
                     /* Retry — this shouldn't happen in blocking mode but handle it */
-                    usleep(10000);
+                    sleep(10000);
                     continue;
                 }
                 

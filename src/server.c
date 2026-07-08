@@ -19,6 +19,7 @@
 #include "commands.h"
 #include "TLS.h"
 #include "database.h"
+#include "network.h"
  
 /* Constants */
 #define PORT 8080
