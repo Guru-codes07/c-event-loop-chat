@@ -42,8 +42,8 @@ void handle_msg_chat(client_t *client, Message *msg)
  
     printf("[CHAT] %s\n", broadcast_msg.payload);
     
-    // to store messages
-    if (db_store_message(client->name, msg->payload, broadcast_msg.timestamp,broadcast_msg.message_id) < 0) 
+    /* Store message in database */
+    if (db_store_message(client->name, msg->payload, broadcast_msg.timestamp, broadcast_msg.message_id) < 0) 
     {
         printf("[WARN] Failed to store message to database: %s\n", db_get_error());
         /* Note: We still broadcast the message even if storage fails */
@@ -63,15 +63,15 @@ void handle_msg_private(client_t *sender, Message *msg)
     /* Format: recipient_name:message_text */
     char *colon = strchr(msg->payload, ':');
     if (colon == NULL)
-     {
+    {
         Message error_msg = {0};
         error_msg.version = PROTOCOL_VERSION;
         error_msg.type = MSG_ERROR;
         error_msg.message_id = msg->message_id;
         error_msg.timestamp = time(NULL);
-        snprintf(error_msg.payload, MAX_PAYLOAD_SIZE,"Invalid private message format. Use: recipient:message");
+        snprintf(error_msg.payload, MAX_PAYLOAD_SIZE, "Invalid private message format. Use: recipient:message");
         error_msg.length = strlen(error_msg.payload);
-        send_msg(sender->socket_fd, &error_msg);
+        send_msg(sender->socket_fd, sender->ssl, &error_msg);
         return;
     }
  
@@ -93,7 +93,7 @@ void handle_msg_private(client_t *sender, Message *msg)
         int available = MAX_PAYLOAD_SIZE - 20;  /* "User '...' not found\0" */
         snprintf(error_msg.payload, MAX_PAYLOAD_SIZE, "User '%.*s' not found", available, recipient_name);
         error_msg.length = strlen(error_msg.payload);
-        send_msg(sender->socket_fd, &error_msg);
+        send_msg(sender->socket_fd, sender->ssl, &error_msg);
         return;
     }
  
@@ -121,16 +121,16 @@ void handle_msg_private(client_t *sender, Message *msg)
     }
     private_msg.length = strlen(private_msg.payload);
  
-    if (send_msg(recipient->socket_fd, &private_msg) < 0) 
+    if (send_msg(recipient->socket_fd, recipient->ssl, &private_msg) < 0) 
     {
         printf("Failed to send private message to %s\n", recipient->name);
     } 
     else 
     {
         printf("[PRIVATE] %s -> %s: %s\n", sender->name, recipient->name, message_text);
-        if (db_store_private_message(sender->name, recipient->name, message_text,time(NULL), msg->message_id) < 0) 
+        if (db_store_private_message(sender->name, recipient->name, message_text, time(NULL), msg->message_id) < 0) 
         {
-            printf("[WARN] Failed to store private message to database: %s\n",db_get_error());
+            printf("[WARN] Failed to store private message to database: %s\n", db_get_error());
             /* We still deliver the message even if storage fails */
         }
     }
@@ -165,7 +165,7 @@ void handle_msg_who(client_t *client, Message *msg)
  
     response.length = strlen(response.payload);
  
-    if (send_msg(client->socket_fd, &response) < 0) 
+    if (send_msg(client->socket_fd, client->ssl, &response) < 0) 
     {
         printf("Failed to send user list to %s\n", client->name);
     } 
@@ -195,7 +195,7 @@ void handle_msg_history(client_t *client, Message *msg)
         response.timestamp = time(NULL);
         snprintf(response.payload, MAX_PAYLOAD_SIZE, "No chat history available");
         response.length = strlen(response.payload);
-        send_msg(client->socket_fd, &response);
+        send_msg(client->socket_fd, client->ssl, &response);
         return;
     }
 
@@ -206,7 +206,7 @@ void handle_msg_history(client_t *client, Message *msg)
     response.message_id = msg->message_id;
     response.timestamp = time(NULL);
 
-    int offset = snprintf(response.payload, MAX_PAYLOAD_SIZE,"=== Chat History (Last %d messages) ===\n", count);
+    int offset = snprintf(response.payload, MAX_PAYLOAD_SIZE, "=== Chat History (Last %d messages) ===\n", count);
 
     /* Messages are returned in reverse order (newest first)
      * So we iterate backwards to display chronologically (oldest first) */
@@ -217,12 +217,12 @@ void handle_msg_history(client_t *client, Message *msg)
         strftime(time_str, sizeof(time_str), "%H:%M:%S", tm_info);
 
         int remaining = MAX_PAYLOAD_SIZE - offset - 1;
-        offset += snprintf(response.payload + offset, remaining,"[%s] %s: %s\n", time_str,messages[i].sender_name,messages[i].message_text);
+        offset += snprintf(response.payload + offset, remaining, "[%s] %s: %s\n", time_str, messages[i].sender_name, messages[i].message_text);
     }
 
     response.length = strlen(response.payload);
     
-    if (send_msg(client->socket_fd, &response) < 0) 
+    if (send_msg(client->socket_fd, client->ssl, &response) < 0) 
     {
         printf("Failed to send history to %s\n", client->name);
     } 
