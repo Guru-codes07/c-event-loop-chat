@@ -5,6 +5,6 @@
 #define PORT 8080
 #define BUFFER_SIZE 1024
 #define NAME_SIZE 32
-#define MAX_CLIENTS 30
+#define MAX_CLIENTS 100
 
 #endif

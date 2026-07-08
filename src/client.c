@@ -44,7 +44,7 @@ typedef struct
     uint32_t message_id;
     uint32_t timestamp;
     uint32_t crc32;
-    char payload[MAX_PAYLOAD_SIZE];
+    char payload[MAX_PAYLOAD_SIZE + 1];
 } Message;
 
 /**

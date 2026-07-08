@@ -83,7 +83,8 @@ static int recv_all(int sockfd, SSL *ssl, void *buffer, size_t length)
                     return -2;
                 }
                 
-                if (err == SSL_ERROR_WANT_READ) {
+                if (err == SSL_ERROR_WANT_READ) 
+                {
                     struct timespec ts = 
                  {
                   .tv_sec = 0,
