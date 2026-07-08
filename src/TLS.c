@@ -16,7 +16,8 @@ static char tls_error_buffer[256] = {0};
 const char *tls_get_error_string(void)
 {
     unsigned long err = ERR_get_error();
-    if (err == 0) {
+    if (err == 0) 
+    {
         snprintf(tls_error_buffer, sizeof(tls_error_buffer), "No error");
         return tls_error_buffer;
     }
@@ -30,19 +31,22 @@ const char *tls_get_error_string(void)
  */
 int tls_init_server(const char *cert_file, const char *key_file)
 {
-    if (tls_server_ctx != NULL) {
+    if (tls_server_ctx != NULL) 
+    {
         fprintf(stderr, "[TLS] Server context already initialized\n");
         return -1;
     }
 
-    if (cert_file == NULL || key_file == NULL) {
+    if (cert_file == NULL || key_file == NULL) 
+    {
         fprintf(stderr, "[TLS] Certificate and key files required\n");
         return -1;
     }
 
     /* Initialize OpenSSL library (call once) */
     static int ssl_initialized = 0;
-    if (!ssl_initialized) {
+    if (!ssl_initialized) 
+    {
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
@@ -51,9 +55,9 @@ int tls_init_server(const char *cert_file, const char *key_file)
 
     /* Create server context */
     tls_server_ctx = SSL_CTX_new(TLS_server_method());
-    if (tls_server_ctx == NULL) {
-        fprintf(stderr, "[TLS] Failed to create server context: %s\n",
-                tls_get_error_string());
+    if (tls_server_ctx == NULL) 
+    {
+        fprintf(stderr, "[TLS] Failed to create server context: %s\n",tls_get_error_string());
         return -1;
     }
 

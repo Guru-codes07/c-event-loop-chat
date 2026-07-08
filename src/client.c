@@ -130,8 +130,15 @@ static int recv_all(SSL *ssl, void *buffer, size_t length)
             if (err == SSL_ERROR_ZERO_RETURN) {
                 return -2;  /* Connection closed */
             }
-            if (err == SSL_ERROR_WANT_READ) {
-                sleep(10000);
+            if (err == SSL_ERROR_WANT_READ) 
+            {
+                struct timespec ts = 
+                 {
+                  .tv_sec = 0,
+                  .tv_nsec = 10000000   // 10 ms
+                 };
+
+                 nanosleep(&ts, NULL);
                 continue;
             }
             perror("[CLIENT] SSL_read");

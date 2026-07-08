@@ -125,7 +125,8 @@ void broadcast_message(Message *msg, client_t *exclude)
     if (msg == NULL)
         return;
  
-    for (int i = 0; i < MAX_CLIENTS; i++) {
+    for (int i = 0; i < MAX_CLIENTS; i++) 
+    {
         if (clients[i] != NULL && clients[i] != exclude) 
         {
             if (send_msg(clients[i]->socket_fd, clients[i]->ssl, msg) < 0) 

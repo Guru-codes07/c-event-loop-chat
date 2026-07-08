@@ -84,8 +84,13 @@ static int recv_all(int sockfd, SSL *ssl, void *buffer, size_t length)
                 }
                 
                 if (err == SSL_ERROR_WANT_READ) {
-                    /* Retry — this shouldn't happen in blocking mode but handle it */
-                    sleep(10000);
+                    struct timespec ts = 
+                 {
+                  .tv_sec = 0,
+                  .tv_nsec = 10000000   // 10 ms
+                 };
+
+                 nanosleep(&ts, NULL);
                     continue;
                 }
                 
