@@ -2,14 +2,17 @@
 #define CONNECTIONS_H
  
 #include <poll.h>
+#include <openssl/ssl.h>
 #include "protocol.h"
  
 #define MAX_CLIENTS 100
 #define NAME_SIZE 32
  
-/* Client structure with binary protocol support */
+/* Client structure with binary protocol and TLS support */
 typedef struct {
     int socket_fd;
+    SSL *ssl;                    /* TLS connection (NULL if not yet handshaken) */
+    int tls_handshake_complete;  /* 1 = ready for messages, 0 = handshake in progress */
     char name[NAME_SIZE];
     MessageBuffer recv_buf;      /* For partial message buffering */
     uint32_t next_message_id;    /* Outgoing message counter */
