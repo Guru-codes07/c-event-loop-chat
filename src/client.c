@@ -98,8 +98,14 @@ static int send_all(SSL *ssl, const void *buffer, size_t length)
         if (bytes <= 0)
         {
             int err = SSL_get_error(ssl, bytes);
-            if (err == SSL_ERROR_WANT_WRITE) {
-                sleep(10000);
+            if (err == SSL_ERROR_WANT_WRITE) 
+            {
+                struct timespec ts = 
+             { 
+                .tv_sec = 0, 
+                .tv_nsec = 10000000 
+             };
+                nanosleep(&ts, NULL);
                 continue;
             }
             perror("[CLIENT] SSL_write");
@@ -357,7 +363,8 @@ void handle_server_message(const Message *msg)
     if (msg == NULL)
         return;
     
-    switch (msg->type) {
+    switch (msg->type) 
+    {
         case MSG_CHAT:
             printf("\r%s\n", msg->payload);
             break;
