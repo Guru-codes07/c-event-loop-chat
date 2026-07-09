@@ -20,7 +20,10 @@ SERVER_SRCS = $(SRC_DIR)/server.c \
               $(SRC_DIR)/network.c \
               $(SRC_DIR)/database.c
 
-CLIENT_SRCS = $(SRC_DIR)/client.c
+CLIENT_SRCS = $(SRC_DIR)/client.c \
+              $(SRC_DIR)/protocol.c \
+              $(SRC_DIR)/TLS.c \
+              $(SRC_DIR)/network.c
 
 # Object files (mirrors src/ under build/obj/)
 SERVER_OBJS = $(patsubst %.c,$(OBJ_DIR)/%.o,$(SERVER_SRCS))
